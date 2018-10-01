@@ -419,7 +419,45 @@ ll query(ll n, ll nl, ll nr, ll l, ll r)
     }
 }
 
-4-2. 2D Fenwick Tree
+4-2. Fenwick Tree( Range update, Range query)
+/*********************************************************
+O(logN) range update, range query
+1. update(a, b, v); // (a, b)에 v만큼 더하기
+2. query(ll a, ll b) // (a, b) 구간 합
+**********************************************************/
+void update(ll tree*, ll p, ll v)
+{
+	for (; p <= N; p += p&(-p))
+    	tree[p] += v;	 
+} 
+void update(ll a, ll b, ll v)
+{	
+  // Add v to A[a...b] 
+  update(B1, a, v); 	
+  update(B1, b + 1, -v); 	
+  update(B2, a, v * (a-1)); 	
+  update(B2, b + 1, -v * b); 	 
+}
+ll query(ll tree*, ll b)
+{	
+  ll sum = 0; 	
+  for(; b > 0; b -= b&(-b))
+    sum += tree[b];
+  return sum;
+}
+ll query(ll b)
+{
+  // Return sum A[1...b]
+  return query(B1, b) * b - query(B2, b);
+}
+ll query(ll a, ll b)
+{
+	// Return sum A[a...b]
+	return query(b) - query(a-1);
+}
+  
+
+4-3. 2D Fenwick Tree
 /*********************************************************
 O(logN) point update, range query
 현재 2D 구간합 버전
