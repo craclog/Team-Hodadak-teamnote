@@ -736,6 +736,31 @@ void make_prime(ll n) // O(NloglogN)
 }
 
 6-2. 소인수분해
+// isprime[i]; `i`의 소수여부
+// fprime[i]: `i`를 합성수라고 판별한 첫번째 소수
+void prime_proc(int N, vector<bool>& isprime, vector<int>& fprime) {
+  int i;
+  long long j;
+  isprime[0] = false;
+  for(i=1; i<=N; ++i) isprime[i] = true;
+  for(i=0; i<=N; ++i) fprime[i] = 0;
+  for(i=2; i<=N; ++i) {
+    if(!isprime[i]) continue;
+    // `i`는 소수임
+    fprime[i] = i;
+    for(j=1LL*i*i; j<=N; j+=i) {
+      isprime[j] = false;
+      if(fprime[j] == 0) {
+        fprime[j] = i;
+      }
+    }
+  }
+}
+
+while(n>1) {
+    cout << fprime[n] << '\n';
+    n/=fprime[n];
+}
 
 6-3. 유클리드 호제법
 /*********************************************************
@@ -747,11 +772,64 @@ ll gcd(ll x, ll y)
     return x;
 }
 
-6-4. 확장 유클리드 호제법
+6-4. 확장 유클리드 호제법 + 잉여 역수
+
+// swap 대신 임시변수 t 를 쓸 수도 있음.
+// 잉여 역수 b, ab=1 (mod n) 을 구하려면 xgcd(n, a) 에서 t0(음수 주의)
+tuple<ll, ll, ll> xgcd(ll a, ll b) {
+    ll q, s0, t0, s1, t1;
+    r0=a, r1=b;
+    s0=1, s1=0;
+    t0=0, t1=1;
+    while(r1 != 0) {
+        q = r0/r1;
+
+        r0 = r0%r1;
+        swap(r0, r1);
+        s0 = s0 - q*s1;
+        swap(s0, s1);
+        t0 = t0 - q*t1;
+        swap(t0, t1);
+    }
+
+    return make_tuple(r0, s0, t0);
+    // r0: a, b의 최대공약수
+    // s0, t0: 베주 계수
+}
+
+ll mul_inv(ll a, ll n) {
+  ll b = xgcd(n, a).get<2>;
+  if(b < 0) b += n;
+  return b;
+}
+
 6-5. 중국인의 나머지 정리
+// x1 = a1 (mod m1)
+// x2 = a2 (mod m2)
+// 식이 여러 개인 경우 2개의 식을 x = a_crt (mod m1*m2) 로 reduce
+ll crt(ll a1, ll m1, ll a2, ll m2) {
+  return (a1 * m2 * mul_inv(m2, m1) + a2 * m1 * mul_inv(m1, m2)) % (m1*m2);
+}
+
 6-6. 오일러 피함수
-6-7. 모듈러 인버스
-6-8. FFT
+
+// prime_proc( ... ) 으로 fprime을 얻는다
+int phi(int n, vector<int> const& fprime) {
+  if(n == 1) return 1;
+  int ret = 1, r = 1, lastp;
+  while(n>1) {
+    lastp = fprime[n];
+    n /= lastp;
+    if(fprime[n] != lastp) {
+      ret *= r*lastp - r;
+      r = 1;
+    }
+    else r *= lastp;
+  }
+  return ret;
+}
+
+6-7. FFT
 
 7. String
 
