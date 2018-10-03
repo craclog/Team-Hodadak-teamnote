@@ -1060,3 +1060,43 @@ void merge(int x, int y)
 }
 
 8-2. Parallel Binary Search
+
+int n; // 쿼리의 개수
+int lo[300000], hi[300000];
+vector<int> qa[300000];
+int main() {
+
+  /* 테스트케이스 입력부 */
+  // scanf("%d", &n);
+  // ...
+
+  for(i=0; i<n; ++i) {
+    lo[i] = BSEARCH_MIN, hi[i] = BSEARCH_MAX;
+  }
+
+  while(true) {
+    bool flag = true;
+    for(i=0; i<n; ++i) {
+      if(lo[i] == hi[i]) continue;
+      qa[lo[i]+hi[i]>>1].push_back(i); // <-- 이 `i`를 주목 (*)
+      flag = false;
+    }
+    if(flag) break;
+
+    for(i = BSEARCH_MIN; i <= BSEARCH_MAX; ++i) {
+      // `i`는 mid 값
+      for(int idx: qa[i]) {
+        // 여기서 `idx`가 (*)의 `i`임.
+        // query id `idx` 에 대해 연산 후 lo[idx] or hi[idx] 결정
+        if(/* condition */) lo[idx] = i+1;
+        else hi[idx] = i;
+      }
+      // 새로운 qa 배열을 만드는 최적화된 코드
+      vector<int> empty;
+      swap(empty, qa[i]);
+    }
+  }
+
+  // 출력
+  return 0;
+}
