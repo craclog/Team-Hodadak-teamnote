@@ -360,8 +360,208 @@ ll lca(ll x, ll y)
 3. Network Flow
 
 3-1. Dinics Algoritm
-3-2. Bipartite Matching
-3-3. MCMF
+/*****************************
+ * O(V^2 E)
+ * 모든 에지의 capacity가 0 혹은 1일 때, min(V^(2/3) * E, E^3/2)
+ *****************************/
+const ll MAXN = 1010;
+struct edg{ll pos, cap, rev;};
+vector<edg> gph[MAXN];
+void clear()
+{
+    for(int i=0; i<MAXN; i++) gph[i].clear();
+}
+void add_edge(ll s, ll e, ll v){
+    gph[s].push_back({e, v, (ll)gph[e].size()});
+    gph[e].push_back({s, 0, (ll)gph[s].size()-1});
+}
+ll level[MAXN], pnt[MAXN];
+bool bfs(ll src, ll sink)
+{
+    memset(level, 0, sizeof(level));
+    memset(pnt, 0, sizeof(pnt));
+    queue<ll> que;
+    que.push(src);
+    level[src] = 1;
+    while(!que.empty())
+    {
+        ll x = que.front();
+        que.pop();
+        for(auto &e : gph[x])
+        {
+            if(e.cap > 0 && !level[e.pos])
+            {
+                level[e.pos] = level[x] + 1;
+                que.push(e.pos);
+            }
+        }
+    }
+    return level[sink] > 0;
+}
+ll dfs(ll x, ll sink, ll f)
+{
+    if(x == sink) return f;
+    for(; pnt[x] < gph[x].size(); pnt[x]++)
+    {
+        edg e = gph[x][pnt[x]];
+        if(e.cap > 0 && level[e.pos] == level[x] +1)
+        {
+            ll w = dfs(e.pos, sink, min(f, e.cap));
+            if(w)
+            {
+                gph[x][pnt[x]].cap -= w;
+                gph[e.pos][e.rev].cap += w;
+                return w;
+            }
+        }
+    }
+    return 0;
+}
+ll match(ll src, ll sink)
+{
+    ll ret = 0, r;
+    while(bfs(src, sink))
+        while((r = dfs(src, sink, INF))) ret += r;
+    return ret;
+}
+
+3-2. MCMF
+/**********************
+ * O((V+E)*f) ~ O(V*E*f)
+ **********************/
+const int MAXN = 100;
+struct edg{ int pos, cap, rev, cost; };
+vector<edg> gph[MAXN];
+void clear()
+{
+    for(int i=0; i<MAXN; i++) gph[i].clear();
+}
+void add_edge(int s, int e, int x, int c)
+{
+    gph[s].push_back({e, x, (int)gph[e].size(), c});
+    gph[e].push_back({s,0, (int)gph[s].size()-1, -c});
+}
+int dist[MAXN], pa[MAXN], pe[MAXN];
+bool inque[MAXN];
+bool spfa(int src, int sink)
+{
+    fill(dist, dist+MAXN, INF);
+    fill(inque, inque+MAXN, 0);
+    queue<int> que;
+    dist[src] = 0;
+    inque[src] = 1;
+    que.push(src);
+    bool ok = 0;
+    while(!que.empty())
+    {
+        int x = que.front();
+        que.pop();
+        if(x == sink) ok = 1;
+        inque[x] = 0;
+        for(int i=0; i<gph[x].size(); i++)
+        {
+            edg e = gph[x][i];
+            if(e.cap > 0 && dist[e.pos] > dist[x] + e.cost)
+            {
+                dist[e.pos] = dist[x] + e.cost;
+                pa[e.pos] = x;
+                pe[e.pos] = i;
+                if(!inque[e.pos])
+                {
+                    inque[e.pos] = 1;
+                    que.push(e.pos);
+                }
+            }
+        }
+    }
+    return ok;
+}
+int match(int src, int sink)
+{
+    int ret = 0;
+    while(spfa(src, sink))
+    {
+        int cap = 1e9;
+        for(int pos = sink; pos != src; pos = pa[pos])
+            cap = min(cap, gph[pa[pos]][pe[pos]].cap);
+
+        ret += dist[sink] * cap;
+        for(int pos = sink; pos != src; pos = pa[pos])
+        {
+            int rev = gph[pa[pos]][pe[pos]].rev;
+            gph[pa[pos]][pe[pos]].cap -= cap;
+            gph[pos][rev].cap += cap;
+        }
+    }
+    return ret;
+}
+
+3-3. Bipartite Matching
+/******************************
+ * O(E√V)
+ * sol() : return 매칭 수
+ ******************************/
+// A[i], B[i]: 그룹의 i번 정점과 매칭된 상대편 그룹 정점 번호
+int N, A[MAX], B[MAX], dist[MAX]; // dist[i]: (A그룹의) i번 정점의 레벨
+bool used[MAX]; // used: (A그룹의) 이 정점이 매칭에 속해 있는가?
+vector<int> adj[MAX];
+ 
+void bfs()
+{
+    queue<int> q;
+    for(int i=0; i<N; i++)
+    {   // 매칭에 안 속한 A그룹의 정점만 레벨 0인 채로 시작
+        if(!used[i])
+        {
+            dist[i] = 0;
+            q.push(i);
+        }
+        else dist[i] = INF;
+    }
+    while(!q.empty())
+    {   // BFS를 통해 A그룹 정점에 0, 1, 2, 3, ... 의 레벨을 매김
+        int i = q.front();
+        q.pop();
+        for(int x : adj[i])
+        {
+            if(B[x] != -1 && dist[B[x]] == INF)
+            {
+                dist[B[x]] = dist[i] + 1;
+                q.push(B[x]);
+            }
+        }
+    }
+}
+bool dfs(int a)
+{
+    for(int b: adj[a])
+    {   // 이분 매칭 코드와 상당히 유사하나, dist 배열에 대한 조건이 추가로 붙음
+        if(B[b] == -1 || ((dist[B[b]] == dist[a]+1) && dfs(B[b])))
+        {   // used 배열 값도 true가 됨
+            used[a] = true;
+            A[a] = b;
+            B[b] = a;
+            return true;
+        }
+    }
+    return false;
+}
+ll sol()
+{
+    ll match = 0;
+    fill(A, A+MAX, -1);
+    fill(B, B+MAX, -1);
+    while(1)
+    {
+        bfs(); 
+        ll flow = 0;
+        for(int i=0; i<N; i++)
+            if(!used[i] && dfs(i)) flow++;
+        if(flow == 0) break;
+        match += flow;
+    }
+    return match;
+}
 
 4. Query Tree
 
