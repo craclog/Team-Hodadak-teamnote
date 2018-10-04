@@ -495,7 +495,7 @@ int match(int src, int sink)
             gph[pa[pos]][pe[pos]].cap -= cap;
             gph[pos][rev].cap += cap;
         }
-        maxflow++;
+        maxflow += cap;
     }
     return ret;
 }
