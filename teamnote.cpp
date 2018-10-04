@@ -428,8 +428,11 @@ ll match(ll src, ll sink)
 3-2. MCMF
 /**********************
  * O((V+E)*f) ~ O(V*E*f)
+ * match(src, sink) := min cost
+ * maxflow := 흐를 수 있는 max flow
  **********************/
 const int MAXN = 100;
+int maxflow = 0;
 struct edg{ int pos, cap, rev, cost; };
 vector<edg> gph[MAXN];
 void clear()
@@ -437,7 +440,7 @@ void clear()
     for(int i=0; i<MAXN; i++) gph[i].clear();
 }
 void add_edge(int s, int e, int x, int c)
-{
+{   // start, end, capacity, cost 순
     gph[s].push_back({e, x, (int)gph[e].size(), c});
     gph[e].push_back({s,0, (int)gph[s].size()-1, -c});
 }
@@ -492,6 +495,7 @@ int match(int src, int sink)
             gph[pa[pos]][pe[pos]].cap -= cap;
             gph[pos][rev].cap += cap;
         }
+        maxflow++;
     }
     return ret;
 }
