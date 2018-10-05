@@ -7,44 +7,53 @@
 #include <cstring>
 #include <cmath>
 #include <functional>
+#include <tuple>
 
 using ll = long long;
 using pll = pair<ll, ll>;
-/***************************temp**************************/
+using tii = pair<int, int>;
+using tll = tuple<ll, ll, ll>;
 
+/*********************************************************/
 
 1. Graph
 
 1-1. dfs iterative
 /*********************************************************
 O(V+E)
+깊이 우선 탐색 iterative 버전
 **********************************************************/
 void dfs_iter(ll x)
 {
-    stack<ll> pos_stack, idx_stack;
-	ll p = x, idx = 0;
+    stack<ll> cur_s, idx_s;
+	ll cur = x, idx = 0;
 	do
 	{
-		ll i, last_idx = adj[p].size();
-		if (!visit[p])
+		ll i, last_idx = adj[cur].size();
+		if (!visit[cur])
 		{
-			visit[p] = 1;
-			printf("%lld ", p + 1); // doing
+			visit[cur] = 1;
+			printf("%lld ", cur + 1); // doing
 		}
-		for (i = idx; i < adj[p].size(); i++)
-			if (!visit[adj[p][i]])
+		for (i = idx; i < adj[cur].size(); i++)
+			if (!visit[adj[cur][i]])
 			{
-				pos_stack.push(p); idx_stack.push(i);
-				p = adj[p][i]; idx = 0; break;
+				cur_s.push(cur); idx_s.push(i);
+				cur = adj[cur][i]; idx = 0;
+                break;
 			}
-		if (i == last_idx) p = pos_stack.top(), pos_stack.pop(), idx = idx_stack.top(), idx_stack.pop();
-		// there is no next vertex;
-	} while (!pos_stack.empty());
+		if (i == last_idx) // there is no next vertex; not break;
+        {
+            cur = cur_s.top(), cur_s.pop();
+            idx = idx_s.top(), idx_s.pop();
+        }
+	} while (!cur_s.empty());
 }
 
 1-2. bfs 
 /*********************************************************
 O(V+E)
+너비 우선 탐색, visit check 타이밍 주의! 
 **********************************************************/
 void bfs(ll x)
 {
@@ -66,17 +75,20 @@ void bfs(ll x)
 
 1-3. Eulerian Curcuit & trail 
 /*********************************************************
-O(VE)
-circuit : reverse order Eulerian Circuit
-adj[x][y] : # of x -> y edges
-trail + (end -> start) = circuit
+O(VE) // E가 V^2보다 클 수 있음!
+음circuit : reverse order Eulerian Circuit
+adj[x][y] : the number of x -> y edges, 즉 인접행렬
+trail은 (end, start)간선을 추가하여, circuit으로 변환하여 푼다.
+홀수 차수가 2개 존재하면, trail이다.
+함정: 간선이 0개인 non-spannig graph도 path가 true다.
 **********************************************************/
 void getEulerCircuit(ll here, vector<ll>& circuit)
 {
+    // adj.size() == N
 	for(ll there = 0; there < adj.size(); there++)
 		while(adj[here][there] > 0)
 		{
-			adj[here][there]--;
+			adj[here][there]--; // 양쪽 간선을 모두 지운다.(무향)
 			adj[there][here]--;
 			getEulerCircuit(there, circuit);
 		}
@@ -86,7 +98,7 @@ void getEulerCircuit(ll here, vector<ll>& circuit)
 1-4. Dijkstra algorithm
 /*********************************************************
 O(ElogV)
-memset(dis, INF, sizeof(dis));
+fill(dis, dis+N, INF);
 adj : pair(vertex, cost)
 edge(i, adj[i].first), cost of this edge = adj[i].second;
 q.top().first = min-cost, second = vertex;
@@ -96,9 +108,9 @@ ll dis[N];
 void dijk(ll s)
 {
 	priority_queue<pll, vector<pll>, greater<pll> > q;
-	// 주의!! q : pair(distance, vertex) <- adj랑 반대
+	// 주의! q : pair(distance, vertex) <- adj랑 반대
 	dis[s] = 0;
-	q.push(make_pair(0, s));
+	q.push({dis[s], s});
 	while (!q.empty())
 	{
 		while (!q.empty() && visit[q.top().second]) q.pop();
@@ -109,7 +121,7 @@ void dijk(ll s)
 			if (dis[adj[next][i].first] > dis[next] + adj[next][i].second)
 			{
 				dis[adj[next][i].first] = dis[next] + adj[next][i].second;
-				q.push(make_pair(dis[adj[next][i].first], adj[next][i].first));
+				q.push({dis[adj[next][i].first], adj[next][i].first});
 			}
 	}
 }
@@ -117,8 +129,8 @@ void dijk(ll s)
 1-5. Bellman-Ford Algorithm
 /*********************************************************
 O(VE)
-사이클 있으면 0 반환, 없으면 1 반환
-memset(dis, INF, sizeof(dis));
+음수사이클 있으면 0 반환, 없으면 1 반환
+fill(dis, dis+N, INF);
 **********************************************************/
 bool bellman(ll x)
 {
@@ -143,20 +155,23 @@ bool bellman(ll x)
 1-6. Floyd-Warshall Algorithm
 /*********************************************************
 O(V^3)
-사이클 있으면 0 반환, 없으면 1 반환
+음수 사이클 있으면 0 반환, 없으면 1 반환
 adj 방식 아니고, 바로 dis 배열에 입력받음, dis[N][N]
+fill(dis, dis+N, INF);
 **********************************************************/
 bool floyd()
 {
 	bool cycle = 0;
-	memset(dis, INF, sizeof(dis));
+
+	fill(dis, dis+N, INF);
 	scanf("%lld %lld", &n, &m);
-	for (ll i = 0; i < m; i++)
+	for (ll i = 0; i < m; i++) // 입력부
 	{
 		ll x, y, cost; scanf("%lld %lld %lld", &x, &y, &cost);
 		x--; y--; // index 가 1부터일 경우
 		dis[x][y] = min(dis[x][y], cost); // 값이 여러개 들어왔을때, 최소값
 	}
+    
 	for (ll i = 0; i < n; i++) dis[i][i] = 0;
 	for (ll k = 0; k < n; k++)
 		for (ll i = 0; i < n; i++)
@@ -200,6 +215,37 @@ ll prim()
 }
 
 2-2. Kruskal algorithm
+/*********************************************************
+O(ElogV)
+스패닝 트리를 만들 수 있으면, 모든 cost의 합을 반환한다.
+스패닝 트리를 만들 수 없으면, -1 반환한다.
+최소 코스트 합만을 반환하는 코드, 직접 간선들을 구하는 것도 가능.
+MST의 두 정점 사이의 path는 원래 그래프에서의 minimax path이다.
+Union-Find 필요
+**********************************************************/
+ll Kruskal()
+{
+	ll ret = 0;
+
+	fill(p, p+N, -1);
+	vector<pair<ll, pll>> e;
+	for(ll i= 0; i < n; i++)
+		for(ll j=0; j < adj[i].size(); j++)
+			e.push_back({adj[i][j].second, {i, adj[i][j].first}});
+	sort(e.begin(), e.end());
+	for(ll i=0; i < e.size(); i++)
+	{
+		ll x = e[i].second.first;
+		ll y = e[i].second.second;
+		if(find(x) != find(y))
+		{
+			merge(x, y);
+			ret += e[i].first;
+		}
+	}
+	if(-p[find(0)] != n) return -1;
+	else return ret;
+}
 
 2-3. Treap (BBST)
 /*********************************************************
@@ -314,8 +360,9 @@ ll countlessthan(Node* root,ll data)
 /*********************************************************
 O(logN)
 트리의 두 정점 사이의 최소공통조상 구하기
-sparse table 버전, N < 2^20
-p : sparse table, d : depth, v : visit check
+sparse table 버전, level < 2^19
+p[i][j] : i 노드의 2^j번째 조상의 index
+d[i], v[i] : dfs tree에서 i 노드의 depth, i 노드 visit check
 **********************************************************/
 ll p[N][20];
 ll d[N];
@@ -335,6 +382,7 @@ void make_tree(ll x, ll depth)
 }
 void init()
 {
+    // root idx: 1, -1 은 부모 없음
 	for(ll i=0; i<20; i++) p[1][i] = -1;
 	make_tree(1, 0);
 
@@ -573,8 +621,8 @@ ll sol()
 /*********************************************************
 O(logN) range update, range query
 현재 구간합 버전
-1. update(1, 0, nn-1, l, r, v); // [l, r]에 v만큼 update
-2. query(1, 0, nn-1, l, r); // [l, r] 구간 쿼리
+1. update(1, 0, n-1, l, r, v); // [l, r]에 v만큼 update
+2. query(1, 0, n-1, l, r); // [l, r] 구간 쿼리
 **********************************************************/
 ll a[4*N + 1] = { 0 };
 ll lazy[4*N + 1] = { 0 };
@@ -659,7 +707,6 @@ ll query(ll a, ll b)
 	// Return sum A[a...b]
 	return query(b) - query(a-1);
 }
-  
 
 4-3. 2D Fenwick Tree
 /*********************************************************
@@ -670,20 +717,20 @@ O(logN) point update, range query
 // (x, y) ~ (xx, yy) 직사각형 구간 합
 **********************************************************/
 ll a[N][N] = { 0 };
-ll t[N][N] = { 0 };
+ll tree[N][N] = { 0 };
 
 void update(ll x, ll y, ll v)
 {
     for(ll xx = x; xx <= n; xx += (xx & -xx))
         for(ll yy = y; yy <= n; yy += (yy & -yy))
-            t[xx][yy] += v;
+            tree[xx][yy] += v;
 }
 ll query(ll x, ll y)
 {
     ll ret = 0;
     for(ll xx = x; xx; xx -= (xx & -xx))
         for(ll yy = y; yy; yy -= (yy & -yy))
-            ret += t[xx][yy];
+            ret += tree[xx][yy];
     return ret;
 }
 ll sol(ll x, ll y, ll xx, ll yy)
@@ -940,29 +987,32 @@ void make_prime(ll n) // O(NloglogN)
 }
 
 6-2. 소인수분해
-// isprime[i]; `i`의 소수여부
-// fprime[i]: `i`를 합성수라고 판별한 첫번째 소수
-void prime_proc(int N, vector<bool>& isprime, vector<int>& fprime) {
-  int i;
-  long long j;
-  isprime[0] = false;
-  for(i=1; i<=N; ++i) isprime[i] = true;
-  for(i=0; i<=N; ++i) fprime[i] = 0;
-  for(i=2; i<=N; ++i) {
-    if(!isprime[i]) continue;
-    // `i`는 소수임
-    fprime[i] = i;
-    for(j=1LL*i*i; j<=N; j+=i) {
-      isprime[j] = false;
-      if(fprime[j] == 0) {
-        fprime[j] = i;
-      }
+/*********************************************************
+O(NloglogN)
+isprime[i]; i의 소수여부
+fprime[i]: i를 합성수라고 판별한 첫번째 소수
+**********************************************************/
+void prime_proc(int n) {
+    fill(fsprime, isprime+N, 0);
+    fill(isprime, isprime+N, 1);
+    isprime[0] = isprime[1] = 0;
+
+    for(ll i = 2; i <= n; i++)
+    {
+        if(isprime[i])
+        {
+            fprime[i] = i; // i는 소수
+            for(ll j = i*i; j < n; j += i)
+            {
+                isprime[j] = 0;
+                if(fprime[j] == 0) fprime[j] = i;
+            }
+        }
     }
-  }
 }
 
-while(n>1) {
-    cout << fprime[n] << '\n';
+while(n>1) { // n을 소인수분해
+    cout << fprime[n] << '\n'
     n/=fprime[n];
 }
 
@@ -977,55 +1027,72 @@ ll gcd(ll x, ll y)
 }
 
 6-4. 확장 유클리드 호제법 + 잉여 역수
-
-// swap 대신 임시변수 t 를 쓸 수도 있음.
-// 잉여 역수 b, ab=1 (mod n) 을 구하려면 xgcd(n, a) 에서 t0(음수 주의)
-tuple<ll, ll, ll> xgcd(ll a, ll b) {
+/*********************************************************
+O(log(a+b))
+a의 mod_inv b,즉 a * b == 1 (mod n) 을 구하려면
+xgcd(n, a) 에서 t0(음수 주의)
+ax + by == gcd(a, b) -> s0 == x, t0 == y
+**********************************************************/
+tuple<ll, ll, ll> xgcd(ll a, ll b)
+{
     ll q, s0, t0, s1, t1;
-    r0=a, r1=b;
-    s0=1, s1=0;
-    t0=0, t1=1;
-    while(r1 != 0) {
-        q = r0/r1;
+    r0 = a, r1 = b;
+    s0 = 1, s1 = 0;
+    t0 = 0, t1 = 1;
 
-        r0 = r0%r1;
+    while(r1 != 0)
+    {
+        q = r0 / r1;
+
+        r0 = r0 % r1;
         swap(r0, r1);
-        s0 = s0 - q*s1;
+        s0 = s0 - q * s1;
         swap(s0, s1);
-        t0 = t0 - q*t1;
+        t0 = t0 - q * t1;
         swap(t0, t1);
     }
 
-    return make_tuple(r0, s0, t0);
+    return {r0, s0, t0};
     // r0: a, b의 최대공약수
-    // s0, t0: 베주 계수
+    // s0, t0: 베주 계수 (서로소)
 }
 
-ll mul_inv(ll a, ll n) {
-  ll b = xgcd(n, a).get<2>;
+ll mod_inv(ll a, ll n)
+{
+  ll b = get<2>(xgcd(n, a));
   if(b < 0) b += n;
   return b;
 }
 
 6-5. 중국인의 나머지 정리
-// x1 = a1 (mod m1)
-// x2 = a2 (mod m2)
-// 식이 여러 개인 경우 2개의 식을 x = a_crt (mod m1*m2) 로 reduce
-ll crt(ll a1, ll m1, ll a2, ll m2) {
+/*********************************************************
+x == a1 (mod m1)
+x == a2 (mod m2) 인, x를 구하여라.
+식이 여러 개인 경우 2개의 식을
+x == crt(a1, m1, a2, m2) (mod m1*m2) 로 reduce
+**********************************************************/
+ll crt(ll a1, ll m1, ll a2, ll m2)
+{
   return (a1 * m2 * mul_inv(m2, m1) + a2 * m1 * mul_inv(m1, m2)) % (m1*m2);
 }
 
 6-6. 오일러 피함수
-
-// prime_proc( ... ) 으로 fprime을 얻는다
-int phi(int n, vector<int> const& fprime) {
+/*********************************************************
+O(NloglogN)
+자연수 n보다 작고 n과 서로소인 자연수의 개수
+prime_proc( ... ) 으로 fprime을 얻는다.
+**********************************************************/
+int phi(int n, vector<int> const& fprime)
+{
   if(n == 1) return 1;
   int ret = 1, r = 1, lastp;
-  while(n>1) {
+  while(n > 1)
+  {
     lastp = fprime[n];
     n /= lastp;
-    if(fprime[n] != lastp) {
-      ret *= r*lastp - r;
+    if(fprime[n] != lastp)
+    {
+      ret *= (r * lastp - r);
       r = 1;
     }
     else r *= lastp;
@@ -1034,14 +1101,70 @@ int phi(int n, vector<int> const& fprime) {
 }
 
 6-7. FFT
+/*********************************************************
+O(NlogN) 다항식 v와 w의 곱 ret을 O(NlogN)에 계산한다.
+HOW TO USE: vector<ll> ret = fft::multiply(v, w);
+v[i], w[i] : x^i번째 항의 계수
+항의 계수가 0일 경우에도 0을 넣어줘야 한다.
+**********************************************************/
+#include <complex>
+#include <cmath>
+namespace fft{
+	typedef complex<double> base;
+	void fft(vector<base> &a, bool inv)
+    {
+		int n = a.size(), j = 0;
+		vector<base> roots(n/2);
+		for(int i=1; i<n; i++)
+        {
+			int bit = (n >> 1);
+			while(j >= bit)
+            {
+				j -= bit;
+				bit >>= 1;
+			}
+			j += bit;
+			if(i < j) swap(a[i], a[j]);
+		}
+		double ang = 2 * acos(-1) / n * (inv ? -1 : 1);
+		for(int i=0; i<n/2; i++)
+        {
+			roots[i] = base(cos(ang * i), sin(ang * i));
+		}
 
-7. String
+		for(int i=2; i<=n; i<<=1)
+        {
+			int step = n / i;
+			for(int j=0; j<n; j+=i)
+            {
+				for(int k=0; k<i/2; k++)
+                {
+					base u = a[j+k], v = a[j+k+i/2] * roots[step * k];
+					a[j+k] = u+v;
+					a[j+k+i/2] = u-v;
+				}
+			}
+		}
+		if(inv) for(int i=0; i<n; i++) a[i] /= n;
+	}
 
-7-1. KMP
+	vector<ll> multiply(vector<ll> &v, vector<ll> &w)
+    {
+		vector<base> fv(v.begin(), v.end()), fw(w.begin(), w.end());
+		int n = 2; while(n < v.size() + w.size()) n <<= 1;
+		fv.resize(n); fw.resize(n);
+		fft(fv, 0); fft(fw, 0);
+		for(int i=0; i<n; i++) fv[i] *= fw[i];
+		fft(fv, 1);
+        vector<ll> ret(n);
+		for(int i=0; i<n; i++) ret[i] = (ll)round(fv[i].real());
+        return ret;
+	}
+}
 
-8. ETC
+7. ETC
 
-8-1. Union-find
+7-1. Union-find
 /*********************************************************
 O(4)
 memset(p, -1, sizeof(p));
@@ -1063,12 +1186,16 @@ void merge(int x, int y)
 	p[y] = x;
 }
 
-8-2. Parallel Binary Search
-
+7-2. Parallel Binary Search
+/*********************************************************
+O(QlogN) 보다 빠르게 할 수 있다.
+**********************************************************/
 int n; // 쿼리의 개수
 int lo[300000], hi[300000];
 vector<int> qa[300000];
-int main() {
+
+int main()
+{
 
   /* 테스트케이스 입력부 */
   // scanf("%d", &n);
